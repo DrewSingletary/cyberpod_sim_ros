@@ -44,6 +44,7 @@ void stateCallback(const cyberpod_sim_ros::state::ConstPtr msg)
 
 	cyberpod_sim_ros::sensor sensor_msg;
 
+	sensor_msg.header.stamp = ros::Time::now();
 	sensor_msg.time = (uint32_t) (state_current_.time*1E6);
 	sensor_msg.data.push_back(encL_pos_);
 	sensor_msg.data.push_back(encR_pos_);

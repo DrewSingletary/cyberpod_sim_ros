@@ -10,19 +10,36 @@ static const uint32_t STATE_LENGTH = 7;
 static const uint32_t INPUT_LENGTH = 2;
 static const uint32_t MEASUREMENT_LENGTH = 4;
 
+// static const double model[15] = {44.798,            //mb
+//                                  2.485,             //mw
+//                                  0.055936595310797, //Jw
+//                                  -0.02322718759275, //a2
+//                                  0.166845864363019, //c2
+//                                  3.604960049044268, //A2
+//                                  2*3.836289730154863, //B2
+//                                  1.069672194414735, //C2
+//                                  1.5, //K
+//                                  0.195,             //r
+//                                  0.5,               //L
+//                                  9.81,              //gGravity
+//                                  1.1,                //FricCoeff 3.185188257847262
+//                                  1.0e-3,            //velEps
+//                                  1.225479467549329  //FricCoeff 1.225479467549329
+//                                  };
+
 static const double model[15] = {44.798,            //mb
                                  2.485,             //mw
                                  0.055936595310797, //Jw
                                  -0.02322718759275, //a2
                                  0.166845864363019, //c2
                                  3.604960049044268, //A2
-                                 2*3.836289730154863, //B2
+                                 3.836289730154863, //B2
                                  1.069672194414735, //C2
-                                 1.5, //K
+                                 1.261650363363571, //K
                                  0.195,             //r
                                  0.5,               //L
                                  9.81,              //gGravity
-                                 1.1,                //FricCoeff 3.185188257847262
+                                 0.,                //FricCoeff 3.185188257847262
                                  1.0e-3,            //velEps
                                  1.225479467549329  //FricCoeff 1.225479467549329
                                  };
@@ -208,9 +225,10 @@ inline void dynamics(const double t,
 
    for(int i=0; i<STATE_LENGTH; i++)
    {
+      xDot[i]=f[i];
       for(int j=0; j<INPUT_LENGTH; j++)
       {
-         xDot[i]=f[i]+g[i+j*STATE_LENGTH]*U[j];
+         xDot[i]+=g[i+j*STATE_LENGTH]*U[j];
       }
    }
 }
@@ -685,7 +703,7 @@ inline void dynamicsGradient(const double t,
    {
       for(uint32_t j=0; j<STATE_LENGTH; j++)
       {
-         double tmp = Df[i];
+         double tmp = Df[i+j*STATE_LENGTH];
          for(uint32_t k=0; k<INPUT_LENGTH; k++)
          {
             tmp+=Dg[i+k*(STATE_LENGTH)+j*STATE_LENGTH*INPUT_LENGTH]*U[k];

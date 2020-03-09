@@ -45,6 +45,7 @@ void sensorCallback(const cyberpod_sim_ros::sensor::ConstPtr msg)
 								dt_);
 	}
 	cyberpod_sim_ros::state state_msg;
+	state_msg.header.stamp = ros::Time::now();
 	state_msg.time = sensorCurrent_.time;
 	state_msg.x = ekf_->x_t_[0];
 	state_msg.y = ekf_->x_t_[1];
@@ -57,7 +58,6 @@ void sensorCallback(const cyberpod_sim_ros::sensor::ConstPtr msg)
 	for (int i = 0 ; i < 7; i ++) {
 		state_msg.stateVec[i] = ekf_->x_t_[i];
 	}
-
 	pub_state_.publish(state_msg);
 }
 

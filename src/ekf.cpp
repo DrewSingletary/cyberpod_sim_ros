@@ -78,12 +78,12 @@ void EKF::update(const std::vector<double> &U,
 
 	//compute K
 	MatrixNZ K = P*Dh.transpose()*(Dh*P*Dh.transpose()+R).inverse();
-//
-//	//compute x
+
+	//compute x
 	Eigen::Map<VectorN> X_new(x_t_.data());
 	X_new = xPred_mat + K*(z-h_mat);
-//
-//	//compute P
+
+	//compute P
 	MapMatrixNN P_new(P_t_.data());
   P_new = ((MatrixNN::Identity()-K*Dh)*P).eval();
 	initialized = 1;
