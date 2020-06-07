@@ -78,19 +78,25 @@ include_directories(
 add_executable(integrator_node src/integrator_node.cpp)
 add_executable(controller_node src/controller_node.cpp)
 add_executable(safety_filter_node src/safety_filter_node.cpp)
+add_executable(safety_filter_robust_node src/safety_filter_robust_node.cpp)
+add_executable(safety_filter_node_truck src/safety_filter_node_truck.cpp)
 add_executable(manual_teleop_node src/manual_teleop_node.cpp src/keyboard.cpp)
 add_executable(converter_node src/converter_node.cpp)
 add_executable(sensor_node src/sensor_node.cpp)
 add_executable(ekf_node src/ekf_node.cpp src/ekf.cpp)
+add_executable(cmd_publisher src/cmd_publisher.cpp)
 
 # Ensure messages built first
 add_dependencies(integrator_node cyberpod_sim_ros_generate_messages_cpp)
 add_dependencies(controller_node cyberpod_sim_ros_generate_messages_cpp)
 add_dependencies(safety_filter_node cyberpod_sim_ros_generate_messages_cpp)
+add_dependencies(safety_filter_robust_node cyberpod_sim_ros_generate_messages_cpp)
+add_dependencies(safety_filter_node_truck cyberpod_sim_ros_generate_messages_cpp)
 add_dependencies(manual_teleop_node cyberpod_sim_ros_generate_messages_cpp)
 add_dependencies(converter_node cyberpod_sim_ros_generate_messages_cpp)
 add_dependencies(sensor_node cyberpod_sim_ros_generate_messages_cpp)
 add_dependencies(ekf_node cyberpod_sim_ros_generate_messages_cpp)
+add_dependencies(cmd_publisher cyberpod_sim_ros_generate_messages_cpp)
 
 
 target_link_libraries(integrator_node
@@ -104,6 +110,20 @@ target_link_libraries(controller_node
 )
 
 target_link_libraries(safety_filter_node
+                      ${catkin_LIBRARIES}
+                      Eigen3::Eigen
+                       asif++::asif++
+                       asif++::libaffa
+)
+
+target_link_libraries(safety_filter_robust_node
+                      ${catkin_LIBRARIES}
+                      Eigen3::Eigen
+                       asif++::asif++
+                       asif++::libaffa
+)
+
+target_link_libraries(safety_filter_node_truck
                       ${catkin_LIBRARIES}
                       Eigen3::Eigen
                        asif++::asif++
@@ -128,4 +148,8 @@ target_link_libraries(sensor_node
 target_link_libraries(ekf_node
                       ${catkin_LIBRARIES}
                       Eigen3::Eigen
+)
+
+target_link_libraries(cmd_publisher
+                      ${catkin_LIBRARIES}
 )

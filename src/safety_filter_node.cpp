@@ -21,9 +21,12 @@ uint32_t iter_;
 double integration_dt_;
 double backup_Tmax_;
 
+bool learning = trues;
+
 CyberTimer<1000> filterTimer;
 
 #include "cyberpod_sim_ros/asif_filter.hpp"
+#include "learning/weights.h"
 
 using namespace Eigen;
 
@@ -43,12 +46,25 @@ void filterInput(void)
 		ROS_INFO("QP FAILED");
 	}
 
+	if (learning) {
+		filter_info_.Lfh_diff[0] = asif->learning_data_.Lfh_diff[0];
+		for (int i = 0; i < (int) nu; i ++) {
+			filter_info_.Lgh_diff[i] = asif->learning_data_.Lgh_diff[i];
+		}
+	}
+	filter_info_.hSafetyNow = asif->hSafetyNow_;
+	filter_info_.indexDebug = asif->index_debug_;
+	for (int i = 0; i < npSS; i++) {
+		filter_info_.hDebug[i] = asif->h_index_[i];
+	}
+
 	filter_info_.hBackupEnd = asif->hBackupEnd_;
 	filter_info_.filterTimerUs = filterTimer.getAverage()*1.0e6;
 
 	// filter_info_.BTorthoBS = asif->BTorthoBS_;
 	// filter_info_.TTS = asif->TTS_;
-	filter_info_.hSafetyNow = asif->hSafetyNow_;
+	for (int i = 0; i < nx*npSS; i++)
+		filter_info_.DhDebug[i] = asif->Dh_index_[i];
 	filter_info_.asifStatus = ASIF::ASIFimplicit::filterErrorMsgString(rc);
 	filter_info_.relax1 = relax[0];
 	filter_info_.relax2 = relax[1];
@@ -79,13 +95,6 @@ void filterInput(void)
 void inputCallback(const cyberpod_sim_ros::input::ConstPtr msg)
 {
 	inputDes_ = *msg;
-}
-
-void stateCallback(const cyberpod_sim_ros::state::ConstPtr msg)
-{
-
-	stateCurrent_ = *msg;
-
 	filterInput();
 	pub_inputAct_.publish(inputAct_);
 	pub_info_.publish(filter_info_);
@@ -112,6 +121,12 @@ void stateCallback(const cyberpod_sim_ros::state::ConstPtr msg)
 	pub_backupTraj_.publish(backTrajMsg_);
 }
 
+void stateCallback(const cyberpod_sim_ros::state::ConstPtr msg)
+{
+
+	stateCurrent_ = *msg;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -124,7 +139,7 @@ int main(int argc, char *argv[])
 	nh_ = new ros::NodeHandle();
 
 	// Init pubs, subs and srvs
-	sub_state_ = nh_->subscribe<cyberpod_sim_ros::state>("state", 1, stateCallback);
+	sub_state_ = nh_->subscribe<cyberpod_sim_ros::state>("state_true", 1, stateCallback);
 	sub_inputDes_ = nh_->subscribe<cyberpod_sim_ros::input>("inputDes", 1, inputCallback);
 
 	pub_inputAct_ = nh_->advertise<cyberpod_sim_ros::input>("input", 1);
@@ -147,27 +162,56 @@ int main(int argc, char *argv[])
 	backTrajMsg_.header.frame_id = "/world";
 	inputDes_.inputVec.fill(0.0);
 
-	// Initialize asif
-	// ASIF::ASIFimplicitTB::Options opts;
-	// opts.backTrajHorizon = backup_Tmax_;
-	// opts.backTrajDt = integration_dt_;
-	// opts.relaxCost = 10;
-	// opts.relaxSafeLb = 2.0;
-	// opts.relaxTTS = 30.0;
-	// opts.relaxMinOrtho = 60.0;
-	// opts.backTrajMinOrtho = 0.001;
+	// Initialize ASIF
+
+	asif = new ASIF::ASIFimplicit(nx,nu,npSS,npBS,npBTSS,
+	                              safetySet,backupSet,dynamics,dynamicsGradients,backupController);
 
 	ASIF::ASIFimplicit::Options opts;
 	opts.backTrajHorizon = backup_Tmax_;
 	opts.backTrajDt = integration_dt_;
 	opts.relaxReachLb = 5.;
 	opts.relaxSafeLb = 1.;
-
-	asif = new ASIF::ASIFimplicit(nx,nu,npSS,npBS,npBTSS,
-	                              safetySet,backupSet,dynamics,dynamicsGradients,backupController);
+	opts.n_debug = -1;
+	opts.use_learning = learning;
+	if (learning){
+	ASIF::LearningData learning_data_;
+	learning_data_.d_drift_in = d_drift_in;
+	learning_data_.d_act_in = d_act_in;
+	learning_data_.d_drift_hidden = d_drift_hidden;
+	learning_data_.d_act_hidden = d_act_hidden;
+	learning_data_.d_drift_hidden_2 = d_drift_hidden_2;
+	learning_data_.d_act_hidden_2 = d_act_hidden_2;
+	learning_data_.d_drift_out = d_drift_out;
+	learning_data_.d_act_out = d_act_out;
+	learning_data_.w_1_drift = w_1_drift;
+	learning_data_.w_2_drift = w_2_drift;
+	learning_data_.w_3_drift = w_3_drift;
+	learning_data_.b_1_drift = b_1_drift;
+	learning_data_.b_2_drift = b_2_drift;
+	learning_data_.b_3_drift = b_3_drift;
+	learning_data_.w_1_act = w_1_act;
+	learning_data_.w_2_act = w_2_act;
+	learning_data_.w_3_act = w_3_act;
+	learning_data_.b_1_act = b_1_act;
+	learning_data_.b_2_act = b_2_act;
+	learning_data_.b_3_act = b_3_act;
+	asif->learning_data_ = learning_data_;
+	}
 
 	asif->initialize(lb,ub,opts);
-	
+
+	for (int i = 0; i < nx*npSS; i++)
+		filter_info_.DhDebug.push_back(0.0);
+
+	for (int i = 0; i < npSS; i++)
+		filter_info_.hDebug.push_back(0.0);
+
+	for (int i = 0; i < nu; i++)
+		filter_info_.Lgh_diff.push_back(0.0);
+
+	filter_info_.Lfh_diff.push_back(0.0);
+
 	geometry_msgs::PoseStamped poseTmp;
 	poseTmp.header.frame_id = "/world";
 	poseTmp.pose.position.z = 0.195;
@@ -185,4 +229,3 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
-

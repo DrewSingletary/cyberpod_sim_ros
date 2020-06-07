@@ -10,7 +10,12 @@
 #include "cyberpod_sim_ros/state.h"
 #include "cyberpod_sim_ros/ui.h"
 #include "cyberpod_sim_ros/common.hpp"
+
+#ifdef TRUCK
+#include "cyberpod_sim_ros/dynamics_truck.hpp"
+#else
 #include "cyberpod_sim_ros/dynamics.hpp"
+#endif
 
 #include <tf/transform_broadcaster.h>
 
@@ -18,7 +23,7 @@
 
 using namespace boost::numeric::odeint;
 typedef std::vector<double> state_t;
-typedef runge_kutta4<state_t> stepper_t;
+typedef euler<state_t> stepper_t;
 
 enum class STATUS : uint8_t
 {

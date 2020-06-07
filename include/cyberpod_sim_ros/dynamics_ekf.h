@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <cstring>
 
-static const uint32_t STATE_LENGTH = 7;
-static const uint32_t INPUT_LENGTH = 2;
+// static const uint32_t STATE_LENGTH = 7;
+// static const uint32_t INPUT_LENGTH = 2;
 static const uint32_t MEASUREMENT_LENGTH = 4;
 
 // static const double model[15] = {44.798,            //mb
@@ -91,7 +91,8 @@ inline void dynamics(const double t,
 
    /*  */
    Fric = X[3] - X[6] * model[9];
-   Fric = model[12] * tanh(Fric / model[13]) + model[14] * Fric;
+   // Fric = model[12] * tanh(Fric / model[13]) + model[14] * Fric;
+   Fric = 0;
    a_tmp = cos(X[5]);
    b_a_tmp = sin(X[5]);
    f[0] = X[3] * cos(X[2]);
@@ -381,7 +382,8 @@ inline void JfFun(const double in1[STATE_LENGTH], double Jf[STATE_LENGTH*STATE_L
   t62 = t9 + t44;
   t69 = t33 + t22 * 4.0;
   t74_tmp = t7 - in1[3];
-  t74 = tanh(-t32 * t74_tmp);
+  // t74 = tanh(-t32 * t74_tmp);
+  t74 = 0;
   t76_tmp_tmp = model[3] * model[4];
   t76_tmp = t76_tmp_tmp * t12 * t17;
   t81 = model[12] * t74;

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="num" default="0"/>
+
+  <node pkg="rosservice" type="rosservice" name="starter" args="call /cyberpod_sim_ros/integrator/ui 'cmd: 1'" />
+
+  <node name="cmd_publisher" pkg="cyberpod_sim_ros" type="cmd_publisher" output="screen"/>
+
+  <node pkg="rosbag" type="record" name="record"
+       args="-e '(.*)cyberpod(.*)' -x '(.*)backup(.*)' -O /home/asinglet/test.bag" output="screen"/>
+
+</launch>

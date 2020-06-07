@@ -34,28 +34,48 @@ void sensorCallback(const cyberpod_sim_ros::sensor::ConstPtr msg)
 	double thetaDot = msg->data[4];
 	double psi = msg->data[5];
 	double psiDot = msg->data[6];
+	// ROS_INFO("%f %f %f %f",v,thetaDot,psi,psiDot);
 	if (ekf_->initialized == 0) {
+		#ifdef TRUCK
+		std::vector<double> state_ekf_ = {0,0,v,0,thetaDot};
+		std::vector<double> P_ekf_ = {0.,0.,0.01,0.,0.01};
+		ekf_->init(state_ekf_,P_ekf_);
+		ROS_INFO("ekf initialized: nx = %i",STATE_LENGTH);
+		#else
 		std::vector<double> state_ekf_ = {0,0,0,v,thetaDot,psi,psiDot};
 		std::vector<double> P_ekf_ = {0.,0.,0.,0.01,0.01,0.01,0.01};
 		ekf_->init(state_ekf_,P_ekf_);
+		#endif
 	}
 	else if (ekf_->initialized == 1){
+		#ifdef TRUCK
+		ekf_->update(std::vector<double> {inputCurrent_.inputVec[0],inputCurrent_.inputVec[1]},
+								std::vector<double> {v,thetaDot},
+								dt_);
+		#else
 		ekf_->update(std::vector<double> {inputCurrent_.inputVec[0],inputCurrent_.inputVec[1]},
 								std::vector<double> {v,thetaDot,psi,psiDot},
 								dt_);
+		#endif
 	}
 	cyberpod_sim_ros::state state_msg;
 	state_msg.header.stamp = ros::Time::now();
 	state_msg.time = sensorCurrent_.time;
 	state_msg.x = ekf_->x_t_[0];
 	state_msg.y = ekf_->x_t_[1];
+	#ifdef TRUCK
+	state_msg.v = ekf_->x_t_[2];
+	state_msg.theta = ekf_->x_t_[3];
+	state_msg.thetaDot = ekf_->x_t_[4];
+	#else
 	state_msg.theta = ekf_->x_t_[2];
 	state_msg.v = ekf_->x_t_[3];
 	state_msg.thetaDot = ekf_->x_t_[4];
 	state_msg.psi = ekf_->x_t_[5];
 	state_msg.psiDot = ekf_->x_t_[6];
+	#endif
 
-	for (int i = 0 ; i < 7; i ++) {
+	for (int i = 0 ; i < STATE_LENGTH; i ++) {
 		state_msg.stateVec[i] = ekf_->x_t_[i];
 	}
 	pub_state_.publish(state_msg);

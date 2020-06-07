@@ -1,5 +1,5 @@
-#ifndef UAV_EXPLORATION_COMMON_H
-#define UAV_EXPLORATION_COMMON_H
+#ifndef CYBERPOD_COMMON_H
+#define CYBERPOD_COMMON_H
 
 #include "cyberpod_sim_ros/CyberTimer.hpp"
 #include <Eigen/Dense>
@@ -10,16 +10,24 @@
 #include <functional>
 #include <signal.h>
 
+// #define TRUCK 1
+
+#ifdef TRUCK
+static const uint32_t STATE_LENGTH = 5;
+static const uint32_t INPUT_LENGTH = 2;
+static const uint32_t CMD_LENGTH = 2;
+#else
 static const uint32_t STATE_LENGTH = 7;
 static const uint32_t INPUT_LENGTH = 2;
 static const uint32_t CMD_LENGTH = 2;
+#endif
 
 inline void quat2eulZYX(const Eigen::Quaterniond &q,
                               Eigen::Vector3d &eul)
 {
 	double eul_tmp = 2.0 * (q.y() * q.y());
 	eul(0) = atan2(2.0 * q.w() * q.x() + 2.0 * q.y() * q.z(), (1.0 - 2.0 * (q.x() * q.x())) - eul_tmp);
-	
+
 	double sinp = +2.0 * (q.w() * q.y() - q.z() * q.x());
 	if (abs(sinp) >= 1)
 		eul(1) = copysign(M_PI / 2, sinp); // use 90 degrees if out of range

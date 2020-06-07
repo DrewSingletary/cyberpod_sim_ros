@@ -7,13 +7,13 @@
 
 static const uint32_t nx = 4;
 static const uint32_t nu = 1;
-static const uint32_t npSS = 2;
+static const uint32_t npSS = 1;
 static const uint32_t npBS = 1;
-static const uint32_t npBTSS = 2;
+static const uint32_t npBTSS = 10;
 
 static const double lb[nu] = {-20.0};
 static const double ub[nu] = {20.0};
-static const double xBound[npSS] = {1.0,M_PI/6.};
+static const double xBound[npSS] = {0.5};
 static const double xBoundBackup[nx] = {1.,.5,M_PI/6,0.5};
 static const double centerBackup[nx] = {0.,0.,0.138324423615,0.};
 static const double P[nx*nx] = {0.222330715963522, 0.139879018245281, 0.209624517233981, 0.0557338014636194, 0.139879018245281, 0.169436279838067, 0.274687320083041, 0.0691344444520717, 0.209624517233981, 0.274687320083041, 0.576639902582541, 0.120488690876664, 0.0557338014636194, 0.0691344444520717, 0.120488690876664, 0.0315931016158699};
@@ -55,10 +55,15 @@ void safetySet(const double x[nx], double h[npSS], double Dh[npSS*nx])
 	}
 
 	h[0] = 1-(xLin[0]*xLin[0])/(xBound[0]*xBound[0]);
-	h[1] = 1-(xLin[2]*xLin[2])/(xBound[1]*xBound[1]);
+	// h[1] = 1-(xLin[2]*xLin[2])/(xBound[1]*xBound[1]);
 
+  //with respect to x[0]
 	Dh[0] = -2.0*xLin[0]/(xBound[0]*xBound[0]);
-	Dh[6] = -2.0*xLin[2]/(xBound[1]*xBound[1]);
+
+  //with respect to x[1]
+
+  //with respect to x[2]
+	// Dh[5] = -2.0*xLin[2]/(xBound[1]*xBound[1]);
 }
 
 void backupSetWithHess(const double x[nx], double h[1], double Dh[nx], double DDh[nx*nx])
@@ -78,7 +83,7 @@ void backupSetWithHess(const double x[nx], double h[1], double Dh[nx], double DD
 }
 
 void backupSet(const double x[nx], double h[1], double Dh[nx])
-{	
+{
 	double xLin[nx];
 	for(uint32_t i = 0; i<nx; i++)
 		xLin[i] = x[i] - centerBackup[i];
@@ -88,7 +93,7 @@ void backupSet(const double x[nx], double h[1], double Dh[nx])
 	{
 		for(uint32_t j = 0; j<nx; j++)
 		{
-			h[0]-=P[i+j*nx]*xLin[i]*xLin[j];			
+			h[0]-=P[i+j*nx]*xLin[i]*xLin[j];
 		}
 	}
 	h[0] /= Pv;
@@ -136,7 +141,8 @@ void dynamics(const double X[nx], double f[nx], double g[nu*nx])
 
 /*  */
 	Fric = X[1] - X[3] * model[9];
-	Fric = model[12] * tanh(Fric / model[13]) + model[14] * Fric;
+  Fric = 0;
+	// Fric = model[12] * tanh(Fric / model[13]) + model[14] * Fric;
 	f[0] = X[1];
 	f_tmp = X[3] * X[3];
 	b_f_tmp = model[4] * model[4];
@@ -270,7 +276,8 @@ void JfFun(const double in1[nx], double Jf[nx*nx])
 	t18 = sin(t14);
 	t34 = t9 + -t11;
 	t69 = t5 - in1[1];
-	t14 = tanh(-t20 * t69);
+	// t14 = tanh(-t20 * t69);
+  t14 = 0;
 	t44_tmp_tmp = model[3] * model[4];
 	t44_tmp = t44_tmp_tmp * t8 * t13;
 	t48 = model[12] * t14;

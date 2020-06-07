@@ -3,34 +3,50 @@
 	<arg name="teleop" default="joy" />
 	<arg name="filter" default="on"/>
 	<arg name="viz" default="on"/>
+	<arg name="robust" default="off"/>
 
-	<include file="$(find cyberpod_sim_ros)/launch/manual_teleop.launch" if="$(eval teleop == 'joy')"/>
+	<!-- <include file="$(find cyberpod_sim_ros)/launch/manual_teleop.launch" if="$(eval teleop == 'joy')"/> -->
 
-	<!-- <include file="$(find cyberpod_sim_ros)/launch/rviz.launch" if="$(eval viz == 'on')"/> -->
+	<include file="$(find cyberpod_sim_ros)/launch/rviz.launch" if="$(eval viz == 'on')"/>
 
 	<group ns="cyberpod_sim_ros">
 
 		<node name="integrator" pkg="cyberpod_sim_ros" type="integrator_node" output="screen">
-			<param name="dt" value="0.001" />
+			<param name="dt" value="0.005" />
+			<param name="input_dt" value="0.01" />
 			<param name="umax" value="20.0" />
-			<param name="input_delay_ms" value="10.0"/>
-			<rosparam param="IC">[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</rosparam>
+			<param name="input_delay_ms" value="0.0"/>
+			<!-- <rosparam param="IC">[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]</rosparam> -->
 		</node>
 
-		<node name="safety_filter" pkg="cyberpod_sim_ros" type="safety_filter_node" output="screen">
+		<node name="safety_filter" pkg="cyberpod_sim_ros" type="safety_filter_robust_node" output="screen" if="$(eval robust == 'on')" >
 			<param name="pass_through" value="0" if="$(eval filter == 'on')"/>
 			<param name="pass_through" value="1" if="$(eval filter == 'off')"/>
-			<param name="integration_dt" value="0.01"/>
+			<param name="integration_dt" value="0.05"/>
+			<param name="backup_dt" value="0.05"/>
+			<param name="backup_Tmax" value="1"/>
+			<param name="time_delay" value="0"/>
+		</node>
+
+		<node name="safety_filter" pkg="cyberpod_sim_ros" type="safety_filter_node" output="screen" if="$(eval robust == 'off')" >
+			<param name="pass_through" value="0" if="$(eval filter == 'on')"/>
+			<param name="pass_through" value="1" if="$(eval filter == 'off')"/>
+			<param name="integration_dt" value="0.005"/>
 			<param name="backup_Tmax" value="1"/>
 		</node>
 
 		<node name="controller" pkg="cyberpod_sim_ros" type="controller_node" output="screen">
 			<param name="offset_angle" value="0.138324423615"/>
+			<param name="umax" value="20"/>
+			<param name="dt" value="0.05"/>
 			<rosparam param="gains">[0., 0., 0., 50.8129, 0., 147.1530, 46.8037]</rosparam>
 		</node>
 
 		<node name="sensor" pkg="cyberpod_sim_ros" type="sensor_node" output="screen">
-			<param name="offset_angle" value="0.138324423615"/>
+			<param name="enc_v_variance" value="0.0"/>
+			<param name="psi_variance" value="0.0"/>
+			<param name="psi_dot_variance" value="0.0"/>
+			<param name="theta_dot_variance" value="0.0"/>
 		</node>
 
 		<node name="ekf" pkg="cyberpod_sim_ros" type="ekf_node" output="screen">

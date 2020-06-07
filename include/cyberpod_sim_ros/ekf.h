@@ -1,7 +1,12 @@
 #ifndef EKF_H
 #define EKF_H
 
+#include "cyberpod_sim_ros/common.hpp"
+#ifdef TRUCK
+#include "dynamics_truck_ekf.h"
+#else
 #include "dynamics_ekf.h"
+#endif
 // #include "Eigen.h"
 #include <Eigen/LU>
 

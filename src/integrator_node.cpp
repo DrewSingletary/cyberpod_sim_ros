@@ -11,6 +11,7 @@ ros::Publisher pub_state_;
 
 double t_;
 double dt_;
+double input_dt_;
 double umax_;
 uint32_t iter_;
 STATUS status_;
@@ -42,23 +43,39 @@ void inputCallback(const cyberpod_sim_ros::input::ConstPtr msg)
 		ROS_WARN_THROTTLE(1,"Input is NaN");
 		return;
 	}
-	inputBuffer_.push_back(*msg);
-	inputBuffer_.erase(inputBuffer_.begin());
-	inputCurrent_ = inputBuffer_[inputBuffer_.size()-1-(int)(input_delay_ms_/1000/dt_)];
+	if (inputBuffer_.size() < 2) {
+		inputCurrent_ = *msg;
+	}
+	else {
+		inputBuffer_.push_back(*msg);
+		inputBuffer_.erase(inputBuffer_.begin());
+		inputCurrent_ = inputBuffer_[inputBuffer_.size()-1-(int)(input_delay_ms_/1000/dt_)];
+	}
 	saturateInPlace(inputCurrent_.inputVec.data(),-umax_,umax_,INPUT_LENGTH);
 }
 
 void updateStateCurrent(void)
 {
+	// ROS_INFO("integrator state_old: (%f,%f,%f,%f)",stateCurrent_.x, stateCurrent_.v, stateCurrent_.psi, stateCurrent_.psiDot);
+	// ROS_INFO("integrator input_current: (%f)",inputCurrent_.inputVec[0]);
 	stateCurrent_.status = static_cast<uint8_t>(status_);
 	stateCurrent_.time = t_;
 	stateCurrent_.x = odeState_[0];
 	stateCurrent_.y = odeState_[1];
+	#ifdef TRUCK
+	stateCurrent_.v = odeState_[2];
+	stateCurrent_.theta = odeState_[3];
+	stateCurrent_.thetaDot = odeState_[4];
+	stateCurrent_.psi = 0.;
+	stateCurrent_.psiDot = 0.;
+	#else
 	stateCurrent_.theta = odeState_[2];
 	stateCurrent_.v = odeState_[3];
 	stateCurrent_.thetaDot = odeState_[4];
 	stateCurrent_.psi = odeState_[5];
 	stateCurrent_.psiDot = odeState_[6];
+	#endif
+	// ROS_INFO("integrator state_new: (%f,%f,%f,%f)",stateCurrent_.x, stateCurrent_.v, stateCurrent_.psi, stateCurrent_.psiDot);
 	std::copy(odeState_.begin(),odeState_.end(),stateCurrent_.stateVec.begin());
 }
 
@@ -195,8 +212,9 @@ int main (int argc, char *argv[])
 
 	// Retreive params
 	nhParams_->param<double>("dt",dt_,0.001);
+	nhParams_->param<double>("input_dt",input_dt_,0.001);
 	nhParams_->param<double>("umax",umax_,20.);
-	nhParams_->param<double>("input_delay_ms",input_delay_ms_,1.);
+	nhParams_->param<double>("input_delay_ms",input_delay_ms_,0);
 	nhParams_->param<state_t>("IC",initialConditions_,initialConditions_);
 
 	if(dt_<=0.0)
@@ -210,10 +228,10 @@ int main (int argc, char *argv[])
 		ROS_WARN("dt must be strictly positive. Will be set to %f",umax_);
 	}
 
-	if(input_delay_ms_<=1.0)
+	if(input_delay_ms_<0.0)
 	{
-		input_delay_ms_ = 1.0;
-		ROS_WARN("input_delay_ms must be greater or equal to 1.0. Will be set to %f",input_delay_ms_);
+		input_delay_ms_ = 0;
+		ROS_WARN("input_delay_ms must be greater or equal to 0.0. Will be set to %f",input_delay_ms_);
 	}
 
 	if(initialConditions_.size()!=STATE_LENGTH)
@@ -226,8 +244,12 @@ int main (int argc, char *argv[])
 	iter_ = 0;
 	status_ = STATUS::STOPPED;
 	resetOdeState();
-	inputBuffer_.resize((int)(2*input_delay_ms_/1000/dt_));
-	for (int i = 0; i < (int)(2*input_delay_ms_/1000/dt_); i++) {
+	int size = (int)(2*input_delay_ms_/1000/dt_);
+	if (size < 1) {
+		size = 1;
+	}
+	inputBuffer_.resize(size);
+	for (int i = 0; i < size; i++) {
 		inputBuffer_[i].inputVec[0] = 0.;
 		inputBuffer_[i].inputVec[1] = 0.;
 	}
@@ -242,6 +264,7 @@ int main (int argc, char *argv[])
 	{
 		ROS_INFO("      %.3f",initialConditions_[i]);
 	}
+
 
 	// Take it for a spin
 	while(ros::ok())

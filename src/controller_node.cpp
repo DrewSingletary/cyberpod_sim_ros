@@ -1,4 +1,4 @@
-#include "cyberpod_sim_ros/controller_node.hpp" 
+#include "cyberpod_sim_ros/controller_node.hpp"
 
 using namespace Eigen;
 
@@ -7,6 +7,8 @@ ros::NodeHandle *nhParams_;
 ros::Subscriber sub_state_;
 ros::Subscriber sub_cmd_;
 ros::Publisher pub_input_;
+
+double dt_;
 
 cyberpod_sim_ros::input input_;
 cyberpod_sim_ros::state stateCurrent_;
@@ -17,6 +19,7 @@ uint32_t iter_;
 VectorXd gainsVec_(STATE_LENGTH);
 VectorXd stateCurrentVec_(STATE_LENGTH);
 double offset_angle_;
+double umax;
 
 // Controller gains
 std::vector<double> gains_(STATE_LENGTH,0.0);
@@ -32,13 +35,28 @@ void computeControlAction(void)
 	input_.status = static_cast<uint8_t>(STATUS::RUNNING);
 
 	VectorXd stateDes(STATE_LENGTH);
+
+	#ifdef TRUCK
+	stateDes(0) = 0;
+	stateDes(2)=cmdCurrent_.cmd[0];
+	stateDes(3) = 0;
+	stateDes(4) = 0;
+	stateDes(1) = 0;
+	#else
 	stateDes(5)=offset_angle_;
 	stateDes(3)=cmdCurrent_.cmd[0];
+	#endif
+
 
 	const double u = gainsVec_.dot(stateCurrentVec_ - stateDes);
 
-	input_.inputVec[0] = u;
-	input_.inputVec[1] = u;
+	#ifdef TRUCK
+	input_.inputVec[0] = u+1*(stateCurrentVec_[4]-cmdCurrent_.cmd[1]);
+	input_.inputVec[1] = u-1*(stateCurrentVec_[4]-cmdCurrent_.cmd[1]);
+	#else
+	input_.inputVec[0] = fmax(fmin(u,umax),-umax);
+	input_.inputVec[1] = fmax(fmin(u,umax),-umax);;
+	#endif
 }
 
 void controlCallback(const cyberpod_sim_ros::state::ConstPtr msg)
@@ -46,10 +64,6 @@ void controlCallback(const cyberpod_sim_ros::state::ConstPtr msg)
 	stateCurrent_ = *msg;
 	for(uint32_t i=0; i<STATE_LENGTH; i++)
 		stateCurrentVec_(i) = stateCurrent_.stateVec[i];
-
-	computeControlAction();
-
-	pub_input_.publish(input_);
 }
 
 void cmdCallback(const cyberpod_sim_ros::cmd::ConstPtr msg)
@@ -78,6 +92,8 @@ int main (int argc, char *argv[])
 	// Retreive params
 	nhParams_->param<double>("offset_angle",offset_angle_,0.);
 	nhParams_->param<std::vector<double>>("gains",gains_,gains_);
+	nhParams_->param<double>("umax",umax,10);
+	nhParams_->param<double>("dt",dt_,0.002);
 	if(gains_.size()!=STATE_LENGTH)
 	{
 		gains_ = std::vector<double>(STATE_LENGTH,0.0);
@@ -95,9 +111,14 @@ int main (int argc, char *argv[])
 		ROS_INFO("      %.3f",gains_[i]);
 	}
 
-	// Take it for a spin
-	while(ros::ok())
-		ros::spinOnce();
 
+	// Take it for a spin
+	ros::Rate rate(1/dt_);
+	while(ros::ok()){
+		ros::spinOnce();
+		computeControlAction();
+		pub_input_.publish(input_);
+		rate.sleep();
+	}
 	return 0;
 }

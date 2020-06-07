@@ -60,7 +60,8 @@ void dynamics(const double t,
 
 /*  */
 	Fric = X[3] - X[6] * model[9];
-	Fric = model[12] * tanh(Fric / model[13]) + model[14] * Fric;
+	// Fric = model[12] * tanh(Fric / model[13]) + model[14] * Fric;
+  Fric = 0;
 	a_tmp = cos(X[5]);
 	b_a_tmp = sin(X[5]);
 	xDot[0] = X[3] * cos(X[2]);

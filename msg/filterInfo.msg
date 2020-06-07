@@ -4,7 +4,12 @@ float64 TTS
 float64 BTorthoBS
 float64 hBackupEnd
 float64 hSafetyNow
+float64[] hDebug
+int32 indexDebug
 float64[4] xBackupEnd
 float64 relax1
 float64 relax2
 float64 filterTimerUs
+float64[] DhDebug
+float64[] Lfh_diff
+float64[] Lgh_diff
